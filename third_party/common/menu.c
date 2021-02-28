@@ -1960,6 +1960,10 @@ static void menu_machine_reset(int type, int pop) {
   }
 }
 
+static void menu_machine_shutdown() {
+  emux_shutdown();
+}
+
 static void reset_shader_params() {
   s_curvature_item->value = 0;
   s_curvature_x_item->value = 10;
@@ -2425,6 +2429,9 @@ static void menu_value_changed(struct menu_item *item) {
   case MENU_HARD_RESET:
     menu_machine_reset(0 /* hard */, 1 /* pop */);
     return;
+  case MENU_SHUTDOWN: 
+    menu_machine_shutdown();
+    return; 
   case MENU_ABOUT:
     show_about();
     return;
@@ -3781,6 +3788,8 @@ void build_menu(struct menu_item *root) {
   ui_menu_add_button(MENU_HARD_RESET, parent, "Hard Reset");
 
   ui_menu_add_button(MENU_SAVE_SETTINGS, root, "Save settings");
+
+  ui_menu_add_button(MENU_SHUTDOWN, root, "Shutdown");
 
   ui_set_on_value_changed_callback(menu_value_changed);
 

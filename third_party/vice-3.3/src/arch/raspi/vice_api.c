@@ -209,6 +209,10 @@ void emux_reset(int soft) {
       MACHINE_RESET_MODE_SOFT : MACHINE_RESET_MODE_HARD);
 }
 
+void emux_shutdown() {
+  machine_shutdown();
+}
+
 int emux_save_state(char *filename) {
   return machine_write_snapshot(filename, 1, 1, 0);
 }

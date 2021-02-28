@@ -960,6 +960,10 @@ void emux_reset(int isSoft) {
   }
 }
 
+void emux_shutdown() {
+  Plus4VM_Destroy(vm);   
+}
+
 int emux_save_state(char *filename) {
   if (Plus4VM_SaveState(vm, filename) != PLUS4EMU_SUCCESS) {
     return 1;

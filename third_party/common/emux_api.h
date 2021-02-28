@@ -266,6 +266,9 @@ void emux_detach_cart(int bank);
 // Reset machine
 void emux_reset(int isSoft);
 
+// Shutdown machine
+void emux_shutdown();
+
 // Save state of machine
 int emux_save_state(char *filename);
 
