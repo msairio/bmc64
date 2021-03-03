@@ -968,6 +968,18 @@ void CKernel::ReadJoystick(int device, int gpioConfig) {
   }
 }
 
+void CKernel::ReadPoweroffGPIO() {
+  int ui_activated = emu_is_ui_activated();
+  int value = gpioPoweroffPin->Read();  
+
+  if (!ui_activated) {
+    if (value == LOW) {
+      //TODO Power off
+      //power_off();
+    }
+  }
+}
+
 void CKernel::ReadCustomGPIO() {
   int i;
   unsigned int bank;
@@ -1467,6 +1479,9 @@ void CKernel::circle_check_gpio() {
      // Disabled
      break;
   }
+
+  // Check Poweroff 
+  ReadPoweroffGPIO();
 }
 
 // Reset the state of the GPIO pins.

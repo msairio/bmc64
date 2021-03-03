@@ -144,6 +144,7 @@ private:
   int ReadDebounced(int pinIndex);
   void ScanKeyboard();
   void ReadJoystick(int device, int gpioConfig);
+  void ReadPoweroffGPIO();
   void ReadCustomGPIO();
   void SetupUserport();
   void ReadWriteUserport();
