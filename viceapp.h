@@ -76,7 +76,7 @@
 // 15 RXD0
 //
 // 02 I2C (Currently unused by BMC64)
-// 03 I2C (Currently unused by BMC64)
+// 03 I2C Power off pin
 //
 // 10 SPI (Currently unused by BMC64)
 // 09 SPI (Currently unused by BMC64)
@@ -270,6 +270,8 @@ protected:
 
   CGPIOPin *gpioPins[NUM_GPIO_PINS];
   CGPIOPin *DPIPins[28];
+
+  CGPIOPin *gpioPoweroffPin;
 
 private:
   void SetupGPIOForInput();

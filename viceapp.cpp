@@ -282,6 +282,9 @@ void ViceScreenApp::SetupGPIOForInput() {
   gpioPins[GPIO_JS2_SELECT_INDEX] =
       new CGPIOPin(GPIO_JS2_SELECT, GPIOModeInputPullUp, &mGPIOManager);
 
+  // Poweroff pin
+  gpioPoweroffPin = new CGPIOPin(3, GPIOModeInputPullUp, &mGPIOManager);
+
   // Convenience arrays for joysticks
   config_1_joystickPins1[JOY_UP] = gpioPins[GPIO_CONFIG_1_JOY_1_UP_INDEX];
   config_1_joystickPins1[JOY_DOWN] = gpioPins[GPIO_CONFIG_1_JOY_1_DOWN_INDEX];
