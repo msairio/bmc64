@@ -22,6 +22,14 @@
 #include <string.h>
 
 #include <circle/gpiopin.h>
+#include <circle/bcmpropertytags.h>
+#include <circle/bcm2835.h>
+
+extern "C" {
+  #include "third_party/common/bootp.h"
+  // from sysinit.c
+  void reboot(void);
+}
 
 CKernel *static_kernel = NULL;
 
@@ -74,6 +82,10 @@ static int kbdRestoreState;
 extern "C" {
 int circle_get_machine_timing() {
   return static_kernel->circle_get_machine_timing();
+}
+
+void circle_poweroff() {
+  static_kernel->circle_poweroff();
 }
 
 void circle_sleep(long delay) {
@@ -302,24 +314,24 @@ void circle_set_shader_params(int curvature,
 		float input_gamma,
 		float output_gamma,
 		int sharper,
-                int bilinear_interpolation) {
-  static_kernel->circle_set_shader_params(curvature,
-			curvature_x,
-			curvature_y,
-			mask,
-			mask_brightness,
-			gamma,
-			fake_gamma,
-			scanlines,
-			multisample,
-			scanline_weight,
-			scanline_gap_brightness,
-			bloom_factor,
-			input_gamma,
-			output_gamma,
-			sharper,
-                        bilinear_interpolation);
-}
+    int bilinear_interpolation) {
+      static_kernel->circle_set_shader_params(curvature,
+        curvature_x,
+        curvature_y,
+        mask,
+        mask_brightness,
+        gamma,
+        fake_gamma,
+        scanlines,
+        multisample,
+        scanline_weight,
+        scanline_gap_brightness,
+        bloom_factor,
+        input_gamma,
+        output_gamma,
+        sharper,
+        bilinear_interpolation);
+    }
 };
 
 namespace {
@@ -380,6 +392,8 @@ CKernel::CKernel(void)
   if (circle_gpio_outputs_enabled()) {
      raspi_userport_enabled = 1;
   }
+  
+  this->PowerOnPeripherals();  
 }
 
 bool CKernel::Initialize(void) {
@@ -974,8 +988,7 @@ void CKernel::ReadPoweroffGPIO() {
 
   if (!ui_activated) {
     if (value == LOW) {
-      //TODO Power off
-      //power_off();
+      circle_poweroff();
     }
   }
 }
@@ -1159,6 +1172,55 @@ void CKernel::ReadWriteUserport() {
     }
     circle_set_userport(new_value);
   }
+}
+
+void CKernel::PowerOffPeripherals() {
+  unsigned long r; 
+
+  // power off devices
+  for(r=0;r<8;r++) {
+    CBcmPropertyTags Tags;
+    TPropertyTagPowerState PowerState;
+    PowerState.nDeviceId = r;
+    PowerState.nState = POWER_STATE_OFF | POWER_STATE_WAIT;
+    Tags.GetTag (PROPTAG_SET_POWER_STATE, &PowerState, sizeof PowerState);
+  }
+
+  // // power off devices one by one
+  // for(r=0;r<16;r++) {
+  //     mbox[0]=8*4;               // size of the mbox contents in bytes
+  //     mbox[1]=MBOX_REQUEST;      // message kind: request
+  //     mbox[2]=MBOX_TAG_SETPOWER; // tag identifier: set power state
+  //     mbox[3]=8;                 // value buffer size in bytes
+  //     mbox[4]=8;                 // request (b31 = 0)
+  //     mbox[5]=(unsigned int)r;   // device id
+  //     mbox[6]=0;                 // bit 0: off, bit 1: no wait
+  //     mbox[7]=MBOX_TAG_LAST;
+  //
+  //     mbox_call(MBOX_CH_PROP);
+  // }
+}
+
+void CKernel::PowerOnPeripherals() {
+  unsigned long r;
+  unsigned long waitTime = 0;  
+
+  // power on devices
+  for(r=0;r<8;r++) {
+    CBcmPropertyTags Tags;
+
+    // TPropertyTagPowerState PowerTiming;
+    // PowerTiming.nDeviceId = r;
+    // Tags.GetTag (/* PROPTAG_GET_TIMING */ 0x00020002, &PowerTiming, sizeof PowerTiming);        
+    // waitTime = fmax(PowerTiming.nState, waitTime);
+    
+    TPropertyTagPowerState PowerState;
+    PowerState.nDeviceId = r;
+    PowerState.nState = POWER_STATE_ON | POWER_STATE_WAIT;
+    Tags.GetTag (PROPTAG_SET_POWER_STATE, &PowerState, sizeof PowerState);    
+  }
+
+  // if (waitTime > 0) this->circle_sleep(waitTime);
 }
 
 void CKernel::circle_sleep(long delay) { mTimer.SimpleusDelay(delay); }
@@ -1717,5 +1779,33 @@ void CKernel::circle_set_shader_params(int curvature,
 			input_gamma,
 			output_gamma,
 			sharper,
-                        bilinear_interpolation);
+      bilinear_interpolation);
+}
+
+void CKernel::circle_poweroff()
+{
+  //TODO unmount drives? 
+  //emux_shutdown();
+
+  this->PowerOffPeripherals();
+  
+  unsigned long r; 
+
+  // power off gpio pins (but not VCC pins)  
+  for (r = 0; r < GPIO_PINS; r++)
+  {
+    CGPIOPin pin;
+    pin.AssignPin(r);
+    pin.SetMode(GPIOModeInput, true);
+  }
+
+  // // inject 63 as the partition number before reboot for sleep mode
+  // r = *ARM_PM_RSTS; r &= 0xfffffaaa;
+  // r |= 0x555;
+  // *ARM_PM_RSTS = ARM_PM_PASSWD | r;
+
+  select_boot_partition(63);
+
+  // power off the SoC (GPU + CPU)
+  reboot();
 }

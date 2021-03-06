@@ -58,6 +58,7 @@ public:
   static void GamePadStatusHandler(unsigned nDeviceIndex,
                                    const TGamePadState *pState);
 
+  void circle_poweroff();
   void circle_sleep(long delay);
   unsigned long circle_get_ticks();
 
@@ -134,7 +135,7 @@ public:
 			float input_gamma,
 			float output_gamma,
 			int sharper,
-			int bilinear_interpolation);
+			int bilinear_interpolation);  
 
 private:
   void InitSound();
@@ -148,6 +149,9 @@ private:
   void ReadCustomGPIO();
   void SetupUserport();
   void ReadWriteUserport();
+  void PowerOffPeripherals();
+  void PowerOnPeripherals();
+  void ResetGPIO();
 
   ViceSound *mViceSound;
   CCPUThrottle mCPUThrottle;

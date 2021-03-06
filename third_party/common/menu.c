@@ -1961,7 +1961,8 @@ static void menu_machine_reset(int type, int pop) {
 }
 
 static void menu_machine_shutdown() {
-  emux_shutdown();
+  // power off
+  circle_poweroff();
 }
 
 static void reset_shader_params() {
