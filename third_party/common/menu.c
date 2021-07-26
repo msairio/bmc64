@@ -54,7 +54,7 @@
 
 extern void reboot(void);
 
-#define VERSION_STRING "master"
+#define VERSION_STRING "3.7"
 
 #ifdef RASPI_LITE
 #define VARIANT_STRING "-Lite"
@@ -105,6 +105,8 @@ int usb_button_assignments[MAX_USB_DEVICES][MAX_USB_BUTTONS];
 int usb_button_bits[MAX_USB_BUTTONS]; // never change
 long keyset_codes[2][7];
 long key_bindings[6];
+
+char attached_disk_name[4][MAX_STR_VAL_LEN];
 
 // Lower byte is BTN_ASSIGN_ constant. Upper byte is port or other arg.
 unsigned int gpio_bindings[NUM_GPIO_PINS];
@@ -1066,10 +1068,8 @@ static void load_settings() {
 
   int tmp_value;
 
-#ifndef RASPI_LITE
   emux_get_int(Setting_DriveSoundEmulation, &drive_sounds_item->value);
   emux_get_int(Setting_DriveSoundEmulationVolume, &drive_sounds_vol_item->value);
-#endif
 
   brightness_item[0]->value = emux_get_color_brightness(0);
   contrast_item[0]->value = emux_get_color_contrast(0);
@@ -1494,8 +1494,10 @@ static void select_file(struct menu_item *item) {
            0) {
          ui_pop_menu();
          ui_error("Failed to attach disk image");
+	 attached_disk_name[unit-8][0] = '\0';
        } else {
          ui_pop_all_and_toggle();
+	 strcpy (attached_disk_name[unit-8], item->str_value);
        }
        return;
      case MENU_DRIVE_ROM_FILE_1541:
@@ -2362,21 +2364,25 @@ static void menu_value_changed(struct menu_item *item) {
   case MENU_DETACH_DISK_8:
     ui_info("Deatching...");
     emux_detach_disk(8);
+    attached_disk_name[0][0] = '\0';
     ui_pop_all_and_toggle();
     return;
   case MENU_DETACH_DISK_9:
     ui_info("Detaching...");
     emux_detach_disk(9);
+    attached_disk_name[1][0] = '\0';
     ui_pop_all_and_toggle();
     return;
   case MENU_DETACH_DISK_10:
     ui_info("Detaching...");
     emux_detach_disk(10);
+    attached_disk_name[2][0] = '\0';
     ui_pop_all_and_toggle();
     return;
   case MENU_DETACH_DISK_11:
     ui_info("Detaching...");
     emux_detach_disk(11);
+    attached_disk_name[3][0] = '\0';
     ui_pop_all_and_toggle();
     return;
   case MENU_DETACH_TAPE:
@@ -2894,7 +2900,7 @@ void emu_get_usb_pref(int device, int *usb_pref_dst, int *x_axis, int *y_axis,
 
 // KEEP in sync with kernel.cpp, kbd.c, menu_usb.c
 static void set_hotkey_choices(struct menu_item *item) {
-  item->num_choices = 14;
+  item->num_choices = 16;
   strcpy(item->choices[HOTKEY_CHOICE_NONE], function_to_string(BTN_ASSIGN_UNDEF));
   strcpy(item->choices[HOTKEY_CHOICE_MENU], function_to_string(BTN_ASSIGN_MENU));
   strcpy(item->choices[HOTKEY_CHOICE_WARP], function_to_string(BTN_ASSIGN_WARP));
@@ -2910,6 +2916,7 @@ static void set_hotkey_choices(struct menu_item *item) {
   strcpy(item->choices[HOTKEY_CHOICE_PIP_LOCATION], function_to_string(BTN_ASSIGN_PIP_LOCATION));
   strcpy(item->choices[HOTKEY_CHOICE_PIP_SWAP], function_to_string(BTN_ASSIGN_PIP_SWAP));
   strcpy(item->choices[HOTKEY_CHOICE_40_80_COLUMN], function_to_string(BTN_ASSIGN_40_80_COLUMN));
+  strcpy(item->choices[HOTKEY_CHOICE_FLUSH_DISK], function_to_string(BTN_ASSIGN_FLUSH_DISK));
   item->choice_ints[HOTKEY_CHOICE_NONE] = BTN_ASSIGN_UNDEF;
   item->choice_ints[HOTKEY_CHOICE_MENU] = BTN_ASSIGN_MENU;
   item->choice_ints[HOTKEY_CHOICE_WARP] = BTN_ASSIGN_WARP;
@@ -2925,6 +2932,7 @@ static void set_hotkey_choices(struct menu_item *item) {
   item->choice_ints[HOTKEY_CHOICE_PIP_LOCATION] = BTN_ASSIGN_PIP_LOCATION;
   item->choice_ints[HOTKEY_CHOICE_PIP_SWAP] = BTN_ASSIGN_PIP_SWAP;
   item->choice_ints[HOTKEY_CHOICE_40_80_COLUMN] = BTN_ASSIGN_40_80_COLUMN;
+  item->choice_ints[HOTKEY_CHOICE_FLUSH_DISK] = BTN_ASSIGN_FLUSH_DISK;
 
   if (emux_machine_class == BMC64_MACHINE_CLASS_VIC20) {
      item->choice_disabled[HOTKEY_CHOICE_SWAP_PORTS] = 1;
@@ -3076,6 +3084,11 @@ void build_menu(struct menu_item *root) {
      sprintf (usb_x_t_name[k], "usb_x_t_%d", k);
      sprintf (usb_y_t_name[k], "usb_y_t_%d", k);
   }
+
+  attached_disk_name[0][0] = '\0';
+  attached_disk_name[1][0] = '\0';
+  attached_disk_name[2][0] = '\0';
+  attached_disk_name[3][0] = '\0';
 
   emux_load_additional_settings();
 
@@ -3726,7 +3739,6 @@ void build_menu(struct menu_item *root) {
 
   parent = ui_menu_add_folder(root, "Prefs");
 
-#ifndef RASPI_LITE
   if (emux_machine_class != BMC64_MACHINE_CLASS_PLUS4EMU) {
     drive_sounds_item = ui_menu_add_toggle(MENU_DRIVE_SOUND_EMULATION, parent,
                                          "Drive sound emulation", 0);
@@ -3734,7 +3746,6 @@ void build_menu(struct menu_item *root) {
         ui_menu_add_range(MENU_DRIVE_SOUND_EMULATION_VOLUME, parent,
                         "Drive sound emulation volume", 0, 1000, 100, 1000);
   }
-#endif
 
   statusbar_item =
       ui_menu_add_multiple_choice(MENU_OVERLAY, parent, "Show Status Bar");
@@ -3833,10 +3844,8 @@ void build_menu(struct menu_item *root) {
   emux_set_video_cache(0);
   emux_set_hw_scale(0);
 
-#ifdef RASPI_LITE
   emux_set_int(Setting_DriveSoundEmulation, 0);
   emux_set_int(Setting_DriveSoundEmulationVolume, 0);
-#endif
 
   // This can somehow get turned off. Make sure its always 1.
   emux_set_int(Setting_Datasette, 1);
@@ -3879,7 +3888,7 @@ void menu_about_to_deactivate() {}
 void menu_quick_func(int button_assignment) {
   int value;
 
-  if (emux_handle_quick_func(button_assignment)) {
+  if (emux_handle_quick_func(button_assignment, fullpath)) {
     return;
   }
 
@@ -4043,6 +4052,8 @@ const char* function_to_string(int button_func) {
        return "40/80 Column Key";
     case BTN_ASSIGN_VKBD_TOGGLE:
        return "Virtual Keyboard";
+    case BTN_ASSIGN_FLUSH_DISK:
+       return "Flush Disks";
     default:
        return "Unknown";
   }
