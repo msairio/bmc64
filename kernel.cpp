@@ -314,24 +314,24 @@ void circle_set_shader_params(int curvature,
 		float input_gamma,
 		float output_gamma,
 		int sharper,
-    int bilinear_interpolation) {
-      static_kernel->circle_set_shader_params(curvature,
-        curvature_x,
-        curvature_y,
-        mask,
-        mask_brightness,
-        gamma,
-        fake_gamma,
-        scanlines,
-        multisample,
-        scanline_weight,
-        scanline_gap_brightness,
-        bloom_factor,
-        input_gamma,
-        output_gamma,
-        sharper,
-        bilinear_interpolation);
-    }
+		int bilinear_interpolation) {
+			static_kernel->circle_set_shader_params(curvature,
+				curvature_x,
+				curvature_y,
+				mask,
+				mask_brightness,
+				gamma,
+				fake_gamma,
+				scanlines,
+				multisample,
+				scanline_weight,
+				scanline_gap_brightness,
+				bloom_factor,
+				input_gamma,
+				output_gamma,
+				sharper,
+				bilinear_interpolation);
+		}
 };
 
 namespace {
@@ -1781,7 +1781,7 @@ void CKernel::circle_set_shader_params(int curvature,
 			input_gamma,
 			output_gamma,
 			sharper,
-      bilinear_interpolation);
+			bilinear_interpolation);
 }
 
 void CKernel::circle_poweroff()
