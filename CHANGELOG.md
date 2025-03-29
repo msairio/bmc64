@@ -335,3 +335,33 @@
   * Fixed bug with raster_skip (cmdline.txt)
   * Fixed incorrect scaling param in machines.txt NTSC C128 59.825hz
   * Fixed "Sound running too slow" problem on Pi0
+
+## 3.7
+  * Fixed RCNTRL key not recognized in keymap files
+  * Provided keymap file for real C16 keyboards
+  * Applied XBOX num buttons patch by rhester
+  * Use gamepad analog axes as paddles (for custom built controllers)
+  * Apply 8580 filter fix (rhester)
+  * Fix transparency not restored properly after reboot
+  * Fixed issue #163 with custom gpio preventing gamepad input
+  * Enable dual sid menu for C128
+  * Enabled sound drive emulation for Pi0
+  * Added virtual devices menu option (#140)
+  * Added disk drive flush function
+  * Added PETSCIIBOARD keyboard mapping
+  * Fix build issue due to -pthread being added
+
+## 4.0
+  * Boot to VDC if 80 column key is down (C128)
+  * Fix CNTRL-F7 safety switch problem if roms not found
+  * Add raster_skip2 to enable raster skip for VDC only
+
+## 4.1
+  * VIC20 symbolic keymap - F3 maps to C=
+  * Add cmdhd support for C64OS (requires JiffyDOS)
+
+## 4.2
+  * Fix incorrect END key mapping
+  * Add 256k and 1024k memory options to plus4emu
+  * Support more recent Maxi keyboard
+

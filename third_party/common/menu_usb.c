@@ -234,6 +234,7 @@ static void add_button_choices(struct menu_item *tmp_item) {
   strcpy(tmp_item->choices[BTN_ASSIGN_PIP_SWAP], function_to_string(BTN_ASSIGN_PIP_SWAP));
   strcpy(tmp_item->choices[BTN_ASSIGN_40_80_COLUMN], function_to_string(BTN_ASSIGN_40_80_COLUMN));
   strcpy(tmp_item->choices[BTN_ASSIGN_VKBD_TOGGLE], function_to_string(BTN_ASSIGN_VKBD_TOGGLE));
+  strcpy(tmp_item->choices[BTN_ASSIGN_FLUSH_DISK], function_to_string(BTN_ASSIGN_FLUSH_DISK));
 
   char scratch[32];
   for (int n = 0; n < 6; n++) {
@@ -244,6 +245,7 @@ static void add_button_choices(struct menu_item *tmp_item) {
   if (emux_machine_class == BMC64_MACHINE_CLASS_VIC20) {
     tmp_item->choice_disabled[BTN_ASSIGN_SWAP_PORTS] = 1;
   }
+
 
   if (emux_machine_class != BMC64_MACHINE_CLASS_C64 &&
       emux_machine_class != BMC64_MACHINE_CLASS_C128) {
@@ -335,7 +337,7 @@ void build_usb_menu(int dev, struct menu_item *root) {
                                     255, 1, pot_y_low_value);
 
   usb_pref_item->num_choices = 3;
-  strcpy(usb_pref_item->choices[0], "Analog Stick");
+  strcpy(usb_pref_item->choices[0], "Analog+POTX/Y Buttons");
   strcpy(usb_pref_item->choices[1], "Hat+POTX/Y Buttons");
   strcpy(usb_pref_item->choices[2], "Hat+POTX/Y Paddles");
 

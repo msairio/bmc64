@@ -47,7 +47,7 @@
 #define MAX_USB_DEVICES 4
 #define MAX_JOY_PORTS 4
 
-#define NUM_GPIO_PINS 19
+#define NUM_GPIO_PINS 23
 
 #define MACHINE_TIMING_NTSC_HDMI 0
 #define MACHINE_TIMING_PAL_HDMI 1
@@ -91,7 +91,6 @@
 #define BTN_ASSIGN_TAPE_MENU 12
 #define BTN_ASSIGN_CART_MENU 13
 #define BTN_ASSIGN_CART_FREEZE 14
-#define BTN_ASSIGN_RESET_MENU 29
 #define BTN_ASSIGN_RESET_HARD 15
 #define BTN_ASSIGN_RESET_SOFT 16
 
@@ -110,6 +109,8 @@
 #define BTN_ASSIGN_PIP_SWAP 26
 #define BTN_ASSIGN_40_80_COLUMN 27
 #define BTN_ASSIGN_VKBD_TOGGLE 28
+#define BTN_ASSIGN_RESET_MENU 29
+#define BTN_ASSIGN_FLUSH_DISK 30
 
 // These are intermediate values not meant to
 // be directly assigned to buttons. Never used as
@@ -268,7 +269,7 @@ extern void circle_set_shader_params(int curvature,
 
 // Init some common layer stuff about the machine being emulated.
 // Must be called before launching emulator's main_program func.
-extern void emu_machine_init(int raster_skip_enabled);
+extern void emu_machine_init(int raster_skip_enabled, int raster_skip2_enabled);
 
 // Compares the previous button state for 'button_num' with
 // the current state and will return a press or release event

@@ -40,6 +40,23 @@
 #include "ui.h"
 #include "keycodes.h"
 
+static int reu_size_to_index[8] =
+    { 128, 256, 512, 1024, 2048, 4096, 8192, 16384 };
+
+static void menu_value_changed(struct menu_item *item) {
+   switch (item->id) {
+      case MENU_REU:
+         resources_set_int("REU", item->value);
+         break;
+      case MENU_REU_SIZE:
+         if (item->value >=0 && item->value < 8)
+            resources_set_int("REUsize", reu_size_to_index[item->value]);
+         break;
+      default:
+         break;
+   }
+}
+
 unsigned long emux_calculate_timing(double fps) {
   if (fps >= 49 && fps <= 51) {
     return C64_PAL_CYCLES_PER_LINE * C64_PAL_SCREEN_LINES * fps;
@@ -123,13 +140,25 @@ void cartridge_freeze(void) {
 struct menu_item* emux_add_palette_options(int menu_id, struct menu_item* parent) {
   struct menu_item* palette_item =
       ui_menu_add_multiple_choice(menu_id, parent, "Color Palette");
-  palette_item->num_choices = 5;
-  palette_item->value = 1;
-  strcpy(palette_item->choices[0], "Default");
-  strcpy(palette_item->choices[1], "Vice");
-  strcpy(palette_item->choices[2], "C64hq");
-  strcpy(palette_item->choices[3], "Pepto-Ntsc");
-  strcpy(palette_item->choices[4], "Pepto-Pal");
+  palette_item->num_choices = 17;
+  palette_item->value = 0;
+  strcpy(palette_item->choices[0], "VICE");
+  strcpy(palette_item->choices[1], "Pepto (PAL)");
+  strcpy(palette_item->choices[2], "Pepto (old PAL)");
+  strcpy(palette_item->choices[3], "Pepto (NTSC, Sony)");
+  strcpy(palette_item->choices[4], "Pepto (NTSC)");
+  strcpy(palette_item->choices[5], "Colodore (PAL)");
+  strcpy(palette_item->choices[6], "ChristopherJam");
+  strcpy(palette_item->choices[7], "C64HQ");
+  strcpy(palette_item->choices[8], "C64S");
+  strcpy(palette_item->choices[9], "CCS64");
+  strcpy(palette_item->choices[10], "Frodo");
+  strcpy(palette_item->choices[11], "Godot");
+  strcpy(palette_item->choices[12], "PC64");
+  strcpy(palette_item->choices[13], "RGB");
+  strcpy(palette_item->choices[14], "Deekay");
+  strcpy(palette_item->choices[15], "Ptoing");
+  strcpy(palette_item->choices[16], "Community Colors");
   return palette_item;
 }
 
@@ -154,6 +183,35 @@ struct menu_item* emux_add_cartridge_options(struct menu_item* root) {
 
   ui_menu_add_button(MENU_SAVE_EASYFLASH, parent, "Save EasyFlash Now");
   ui_menu_add_button(MENU_CART_FREEZE, parent, "Cartridge Freeze");
+  struct menu_item* child = ui_menu_add_folder(parent, "Ram Expansion");
+  ui_menu_add_button(MENU_SAVE_EASYFLASH, child, "REU");
+
+  int tmp;
+  resources_get_int("REU", &tmp);
+  struct menu_item* reu_item =
+     ui_menu_add_toggle(MENU_REU, child, "Ram Expansion", tmp);
+  reu_item->on_value_changed = menu_value_changed;
+
+  struct menu_item* sizes_item =
+      ui_menu_add_multiple_choice(MENU_REU_SIZE, child, "Memory Size");
+  sizes_item->on_value_changed = menu_value_changed;
+  sizes_item->num_choices = 8;
+
+  resources_get_int("REUsize", &tmp);
+  sizes_item->value = 2;
+  for (int t=0;t<8;t++) {
+    if (tmp == reu_size_to_index[t])
+       sizes_item->value = t;
+  }
+
+  strcpy(sizes_item->choices[0], "128k");
+  strcpy(sizes_item->choices[1], "256k");
+  strcpy(sizes_item->choices[2], "512k");
+  strcpy(sizes_item->choices[3], "1024k");
+  strcpy(sizes_item->choices[4], "2048k");
+  strcpy(sizes_item->choices[5], "4096k");
+  strcpy(sizes_item->choices[6], "8192k");
+  strcpy(sizes_item->choices[7], "16384k");
 
   return parent;
 }

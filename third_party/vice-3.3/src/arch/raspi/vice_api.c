@@ -56,6 +56,7 @@
 #include "sid.h"
 #include "sid-resources.h"
 #include "userport/userport_joystick.h"
+#include "cbmimage.h"
 
 // RASPI includes
 #include "circle.h"
@@ -132,7 +133,7 @@ static void check_sid_options() {
   }
 }
 
-void emu_machine_init(int raster_skip_enabled) {
+void emu_machine_init(int raster_skip_enabled, int raster_skip2_enabled) {
   switch (machine_class) {
     case VICE_MACHINE_C64:
        emux_machine_class = BMC64_MACHINE_CLASS_C64;
@@ -155,10 +156,10 @@ void emu_machine_init(int raster_skip_enabled) {
   }
 
   canvas_state[VIC_INDEX].raster_skip = raster_skip_enabled ? 2 : 1;
-  canvas_state[VDC_INDEX].raster_skip = raster_skip_enabled ? 2 : 1;
+  canvas_state[VDC_INDEX].raster_skip = raster_skip2_enabled ? 2 : 1;
 
   // If raster skip enabled via kernel params, enable lines.
-  set_raster_lines(raster_skip_enabled);
+  set_raster_lines(raster_skip_enabled, raster_skip2_enabled);
 }
 
 static int vice_keymap_index_to_bmc(int value) {
@@ -169,6 +170,8 @@ static int vice_keymap_index_to_bmc(int value) {
          return KEYBOARD_MAPPING_POS;
       case KBD_INDEX_USERPOS:
          return KEYBOARD_MAPPING_MAXI;
+      case KBD_INDEX_USERSYM:
+         return KEYBOARD_MAPPING_PETSCIIBOARD;
       default:
          return KEYBOARD_MAPPING_SYM;
    }
@@ -316,7 +319,7 @@ void emux_drive_change_model(int unit) {
     strcat(item->displayed_value, " (*)");
   }
 
-  static int num_supported_drives = 12;
+  static int num_supported_drives = 13;
   static int supported_drives[] = {
      DRIVE_TYPE_1541,
      DRIVE_TYPE_1541II,
@@ -330,6 +333,7 @@ void emux_drive_change_model(int unit) {
      DRIVE_TYPE_1001,
      DRIVE_TYPE_8050,
      DRIVE_TYPE_8250,
+     DRIVE_TYPE_CMDHD,
   };
 
   static const char* drive_labels[] = {
@@ -345,6 +349,7 @@ void emux_drive_change_model(int unit) {
      "1001",
      "8050",
      "8250",
+     "CMDHD",
   };
 
   for (int i = 0 ; i < num_supported_drives; i++) {
@@ -370,6 +375,8 @@ void emux_add_drive_option(struct menu_item* root, int drive) {
      // Options applicable to all drives
      resources_get_int("DriveTrueEmulation", &tmp);
      ui_menu_add_toggle(MENU_DRIVE_TRUE_EMULATION, root, "True Emulation", tmp);
+     resources_get_int("VirtualDevices", &tmp);
+     ui_menu_add_toggle(MENU_VIRTUAL_DEVICES, root, "Virtual Devices", tmp);
      return;
   }
 
@@ -443,9 +450,51 @@ void emux_add_drive_option(struct menu_item* root, int drive) {
   resources_get_int_sprintf("Drive%iRAMA000", &tmp, drive);
   ui_menu_add_toggle(MENU_DRIVE_RAM_A000, parent, "RAM A000", tmp)
      ->sub_id = drive;
+
+  int button;
+  switch (drive) {
+     case 8:
+        id = MENU_CMDHD_MODE_8;
+        button = drive_get_button(0);
+        break;
+     case 9:
+        id = MENU_CMDHD_MODE_9;
+        button = drive_get_button(1);
+        break;
+     case 10:
+        id = MENU_CMDHD_MODE_10;
+        button = drive_get_button(2);
+        break;
+     case 11:
+        id = MENU_CMDHD_MODE_11;
+        button = drive_get_button(3);
+        break;
+     default:
+        id = MENU_CMDHD_MODE_8;
+        button = drive_get_button(0);
+        break;
+  }
+
+  if (button == 1) {
+     index = 2; // Configuration
+  } else if (button == 6) {
+     index = 1; // Initialization
+  } else {
+     index = 0; // Normal
+  }
+
+  child = ui_menu_add_multiple_choice(id, parent, "CMDHD Mode");
+  child->num_choices = 3;
+  child->value = index;
+  strcpy(child->choices[0], "Normal");
+  strcpy(child->choices[1], "Initialization");
+  strcpy(child->choices[2], "Configuration");
+  child->choice_ints[0] = 0; // all switches off
+  child->choice_ints[1] = 6; // swap8 and swap9 on
+  child->choice_ints[2] = 1; // write protect on
 }
 
-void emux_create_disk(struct menu_item* item, fullpath_func fullpath) {
+void emux_create_disk(struct menu_item* item, fullpath_func f_fullpath) {
      char ext[5];
      int image_type;
      switch (item->id) {
@@ -489,6 +538,10 @@ void emux_create_disk(struct menu_item* item, fullpath_func fullpath) {
          image_type = DISK_IMAGE_TYPE_G64;
          strcpy(ext, ".g64");
          break;
+       case MENU_CREATE_G71_FILE:
+         image_type = DISK_IMAGE_TYPE_G71;
+         strcpy(ext, ".g71");
+         break;
        case MENU_CREATE_P64_FILE:
          image_type = DISK_IMAGE_TYPE_P64;
          strcpy(ext, ".p64");
@@ -496,6 +549,10 @@ void emux_create_disk(struct menu_item* item, fullpath_func fullpath) {
        case MENU_CREATE_X64_FILE:
          image_type = DISK_IMAGE_TYPE_X64;
          strcpy(ext, ".x64");
+         break;
+       case MENU_CREATE_DHD_FILE:
+         image_type = DISK_IMAGE_TYPE_DHD;
+         strcpy(ext, ".dhd");
          break;
        default:
          return;
@@ -533,13 +590,62 @@ void emux_create_disk(struct menu_item* item, fullpath_func fullpath) {
 
     ui_info("Creating...");
     if (vdrive_internal_create_format_disk_image(
-         fullpath(DIR_DISKS, fname), "DISK", image_type) < 0) {
+         f_fullpath(DIR_DISKS, fname), "DISK", image_type) < 0) {
       ui_pop_menu();
       ui_error("Create disk image failed");
     } else {
       ui_pop_menu();
       ui_pop_menu();
       ui_info("Disk Created");
+    }
+}
+
+void emux_create_tape(struct menu_item* item, fullpath_func f_fullpath) {
+    char ext[5];
+    int image_type;
+
+    image_type = DISK_IMAGE_TYPE_TAP;
+    strcpy(ext, ".tap");
+
+    char *fname = item->str_value;
+    if (item->type == TEXTFIELD) {
+      // Scrub the filename before passing it along
+      fname = item->str_value;
+      if (strlen(fname) == 0) {
+        ui_error("Empty filename");
+        return;
+      } else if (strlen(fname) > MAX_FN_NAME) {
+        ui_error("Too long");
+        return;
+      }
+      char *dot = strchr(fname, '.');
+      if (dot == NULL) {
+        if (strlen(fname) + 4 <= MAX_FN_NAME) {
+          strcat(fname, ext);
+        } else {
+          ui_error("Too long");
+          return;
+        }
+      } else {
+        if (strncasecmp(dot, ext, 4) != 0) {
+          ui_error("Wrong extension");
+          return;
+        }
+      }
+    } else {
+      // Don't allow overwriting an existing file. Just ignore it.
+      return;
+    }
+
+    ui_info("Creating...");
+    if (cbmimage_create_image(
+         f_fullpath(DIR_TAPES, fname), image_type) < 0) {
+      ui_pop_menu();
+      ui_error("Create tape image failed");
+    } else {
+      ui_pop_menu();
+      ui_pop_menu();
+      ui_info("Tape Created");
     }
 }
 
@@ -631,7 +737,7 @@ void emux_add_tape_options(struct menu_item* parent) {
 void emux_add_keyboard_options(struct menu_item* parent) {
   keyboard_mapping_item = ui_menu_add_multiple_choice(
       MENU_KEYBOARD_MAPPING, parent, "Mapping");
-  keyboard_mapping_item->num_choices = 3;
+  keyboard_mapping_item->num_choices = 4;
 
   int tmp_value;
   resources_get_int("KeymapIndex", &tmp_value);
@@ -642,6 +748,8 @@ void emux_add_keyboard_options(struct menu_item* parent) {
   keyboard_mapping_item->choice_ints[KEYBOARD_MAPPING_POS] = KBD_INDEX_POS;
   strcpy(keyboard_mapping_item->choices[KEYBOARD_MAPPING_MAXI], "Maxi Positional");
   keyboard_mapping_item->choice_ints[KEYBOARD_MAPPING_MAXI] = KBD_INDEX_USERPOS;
+  strcpy(keyboard_mapping_item->choices[KEYBOARD_MAPPING_PETSCIIBOARD], "PETSCIIBOARD");
+  keyboard_mapping_item->choice_ints[KEYBOARD_MAPPING_PETSCIIBOARD] = KBD_INDEX_USERSYM;
 }
 
 // NOTES: 0xd400 is normally not an option in VICE for the 2nd SID but
@@ -669,7 +777,7 @@ void emux_add_sound_options(struct menu_item* parent) {
      return;
   }
 
-  int supports_dual_sid = machine_class == VICE_MACHINE_C64 &&
+  int supports_dual_sid = (machine_class == VICE_MACHINE_C64 || machine_class == VICE_MACHINE_C128) &&
                            circle_get_model() >= 2;
 
   // Resid by default
@@ -782,7 +890,7 @@ void emux_set_warp(int warp) {
   resources_set_int("WarpMode", warp);
 }
 
-void emux_handle_rom_change(struct menu_item* item, fullpath_func fullpath) {
+void emux_handle_rom_change(struct menu_item* item, fullpath_func f_fullpath) {
   // Make the rom change. These can't be fullpath or VICE complains.
   switch (item->id) {
      case MENU_DRIVE_ROM_FILE_1541:
@@ -799,6 +907,9 @@ void emux_handle_rom_change(struct menu_item* item, fullpath_func fullpath) {
        return;
      case MENU_DRIVE_ROM_FILE_1581:
        resources_set_string("DosName1581", item->str_value);
+       return;
+     case MENU_DRIVE_ROM_FILE_CMDHD:
+       resources_set_string("DosNameCMDHD", item->str_value);
        return;
      case MENU_KERNAL_FILE:
        resources_set_string("KernalName", item->str_value);
@@ -895,6 +1006,9 @@ void emux_set_int_1(IntSetting setting, int value, int param) {
      break;
    case Setting_IECDeviceN:
      resources_set_int_sprintf("IECDevice%i", value, param);
+     break;
+   case Setting_DriveNCMDHDMode:
+     drive_cpu_trigger_reset_button(param-8, value);
      break;
    default:
      assert(0);
@@ -1017,10 +1131,16 @@ int emux_handle_menu_change(struct menu_item* item) {
       if (item->value == KEYBOARD_MAPPING_MAXI) {
          resources_set_string("KeymapUserPosFile", "rpi_maxi_pos.vkm");
       }
+      else if (item->value == KEYBOARD_MAPPING_PETSCIIBOARD) {
+         resources_set_string("KeymapUserSymFile", "rpi_petsciiboard_sym.vkm");
+      }
       resources_set_int("KeymapIndex", item->choice_ints[item->value]);
       return 1;
     case MENU_DRIVE_TRUE_EMULATION:
       resources_set_int("DriveTrueEmulation", item->value);
+      return 1;
+    case MENU_VIRTUAL_DEVICES:
+      resources_set_int("VirtualDevices", item->value);
       return 1;
     default:
       break;
@@ -1029,10 +1149,32 @@ int emux_handle_menu_change(struct menu_item* item) {
   return 0;
 }
 
-int emux_handle_quick_func(int button_func) {
+int emux_handle_quick_func(int button_func, fullpath_func f_fullpath) {
+  int drive;
+  struct menu_item *root;
+  struct menu_item *child;
   switch (button_func) {
     case BTN_ASSIGN_CART_FREEZE:
        cartridge_freeze();
+       return 1;
+    case BTN_ASSIGN_FLUSH_DISK:
+       if (ui_enabled) {
+         ui_dismiss_osd_if_active();
+         return 1;
+       }
+
+       for (drive=0;drive<4;drive++) {
+          emux_detach_disk(drive+8);
+          if (strlen(attached_disk_name[drive]) > 0) {
+             emux_attach_disk_image(drive+8,
+                f_fullpath(DIR_DISKS, attached_disk_name[drive]));
+          }
+       }
+
+       root = ui_push_menu(18, 3);
+       root->on_popped_off = glob_osd_popped;
+       child = ui_menu_add_button(MENU_ID_DO_NOTHING, root, "Disks flushed...");
+       ui_enable_osd();
        return 1;
     default:
        break;

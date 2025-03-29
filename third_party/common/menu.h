@@ -28,11 +28,13 @@
 
 #include "circle.h"
 
+#include "emux_api.h"
+
 #ifndef RASPI_MENU_H
 #define RASPI_MENU_H
 
 // Make sure does not exceed max choices in ui.h
-#define NUM_BUTTON_ASSIGNMENTS 29
+#define NUM_BUTTON_ASSIGNMENTS 31
 
 // Never used as values. Can be reorged.
 typedef enum {
@@ -112,6 +114,7 @@ typedef enum {
    MENU_DRIVE_ROM_FILE_1551,
    MENU_DRIVE_ROM_FILE_1571,
    MENU_DRIVE_ROM_FILE_1581,
+   MENU_DRIVE_ROM_FILE_CMDHD,
 
    MENU_DRIVE_RAM_2000,
    MENU_DRIVE_RAM_4000,
@@ -277,6 +280,7 @@ typedef enum {
    MENU_DRIVE_CHANGE_ROM_1551,
    MENU_DRIVE_CHANGE_ROM_1571,
    MENU_DRIVE_CHANGE_ROM_1581,
+   MENU_DRIVE_CHANGE_ROM_CMDHD,
 
    MENU_DRIVE_TRUE_EMULATION,
 
@@ -359,9 +363,12 @@ typedef enum {
    MENU_CREATE_D2M,
    MENU_CREATE_D4M,
    MENU_CREATE_G64,
+   MENU_CREATE_G71,
    MENU_CREATE_G41,
    MENU_CREATE_P64,
    MENU_CREATE_X64,
+   MENU_CREATE_DHD,
+   MENU_CREATE_TAP,
 
    MENU_CREATE_D64_FILE,
    MENU_CREATE_D67_FILE,
@@ -373,8 +380,11 @@ typedef enum {
    MENU_CREATE_D2M_FILE,
    MENU_CREATE_D4M_FILE,
    MENU_CREATE_G64_FILE,
+   MENU_CREATE_G71_FILE,
    MENU_CREATE_P64_FILE,
    MENU_CREATE_X64_FILE,
+   MENU_CREATE_DHD_FILE,
+   MENU_CREATE_TAP_FILE,
 
    MENU_CONFIGURE_KEYSET1,
    MENU_CONFIGURE_KEYSET2,
@@ -429,6 +439,11 @@ typedef enum {
    MENU_PARALLEL_10,
    MENU_PARALLEL_11,
 
+   MENU_CMDHD_MODE_8,
+   MENU_CMDHD_MODE_9,
+   MENU_CMDHD_MODE_10,
+   MENU_CMDHD_MODE_11,
+
    MENU_VOLUME,
    MENU_SWITCH_MACHINE,
 
@@ -468,6 +483,10 @@ typedef enum {
    MENU_SHADER_OUTPUT_GAMMA,
    MENU_SHADER_SHARPER,
    MENU_SHADER_RESET_ALL,
+
+   MENU_VIRTUAL_DEVICES,
+   MENU_REU,
+   MENU_REU_SIZE
 } MenuID;
 
 typedef enum {
@@ -485,6 +504,7 @@ typedef enum {
    KEYBOARD_MAPPING_SYM = 0,
    KEYBOARD_MAPPING_POS,
    KEYBOARD_MAPPING_MAXI,
+   KEYBOARD_MAPPING_PETSCIIBOARD,
 } MenuKeyboardMapping;
 
 // Used as indices
@@ -531,6 +551,7 @@ typedef enum {
    HOTKEY_CHOICE_PIP_LOCATION,
    HOTKEY_CHOICE_PIP_SWAP,
    HOTKEY_CHOICE_40_80_COLUMN,
+   HOTKEY_CHOICE_FLUSH_DISK,
 } HotKeyChoice;
 
 enum {
@@ -597,6 +618,7 @@ typedef enum {
 
 extern long keyset_codes[2][7];
 extern long key_bindings[6];
+extern char attached_disk_name[4][MAX_STR_VAL_LEN];
 
 extern int pot_x_high_value;
 extern int pot_x_low_value;
